@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package mapreduce.v1;
+
+option go_package = "github.com/tauqxxr7/mini-mapreduce-engine/internal/rpc;rpc";
+
+service MasterService {
+  rpc SubmitJob(SubmitJobRequest) returns (SubmitJobResponse);
+  rpc RegisterWorker(RegisterWorkerRequest) returns (RegisterWorkerResponse);
+  rpc RequestTask(RequestTaskRequest) returns (RequestTaskResponse);
+  rpc SubmitTaskResult(SubmitTaskResultRequest) returns (SubmitTaskResultResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
+}
+
+message SubmitJobRequest {
+  string input_path = 1;
+  string output_path = 2;
+  int32 num_reducers = 3;
+  int32 chunk_size_bytes = 4;
+}
+
+message SubmitJobResponse {
+  string job_id = 1;
+}
+
+message RegisterWorkerRequest {
+  string worker_id = 1;
+}
+
+message RegisterWorkerResponse {
+  string worker_id = 1;
+  string message = 2;
+}
+
+message RequestTaskRequest {
+  string worker_id = 1;
+}
+
+message RequestTaskResponse {
+  string job_id = 1;
+  string task_id = 2;
+  TaskType task_type = 3;
+  string input_path = 4;
+  int32 map_task_id = 5;
+  int32 reduce_task_id = 6;
+  int32 num_reducers = 7;
+  repeated string intermediate_paths = 8;
+  string output_path = 9;
+  string message = 10;
+}
+
+message SubmitTaskResultRequest {
+  string worker_id = 1;
+  string job_id = 2;
+  string task_id = 3;
+  TaskType task_type = 4;
+  repeated string output_paths = 5;
+  string error = 6;
+}
+
+message SubmitTaskResultResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+message HeartbeatRequest {
+  string worker_id = 1;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+}
+
+message GetJobStatusRequest {
+  string job_id = 1;
+}
+
+message GetJobStatusResponse {
+  string job_id = 1;
+  JobStatus status = 2;
+  int32 map_completed = 3;
+  int32 map_total = 4;
+  int32 reduce_completed = 5;
+  int32 reduce_total = 6;
+  string output_path = 7;
+  string error = 8;
+}
+
+enum TaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  TASK_TYPE_MAP = 1;
+  TASK_TYPE_REDUCE = 2;
+  TASK_TYPE_WAIT = 3;
+  TASK_TYPE_EXIT = 4;
+}
+
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_PENDING = 1;
+  JOB_STATUS_RUNNING = 2;
+  JOB_STATUS_COMPLETED = 3;
+  JOB_STATUS_FAILED = 4;
+}

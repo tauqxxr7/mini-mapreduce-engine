@@ -1,0 +1,8 @@
+Google builds systems that turn large ideas into reliable services.
+MapReduce made large scale data processing easier to reason about.
+Workers map words into intermediate key value pairs.
+The master schedules map tasks and reduce tasks across workers.
+Failures happen, so production systems retry work after timeouts.
+Reduce workers aggregate values and write final word counts.
+Distributed systems need clear ownership, observability, and simple recovery paths.
+MapReduce is a small idea with a very large impact.

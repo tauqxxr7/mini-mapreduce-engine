@@ -1,0 +1,14 @@
+FROM golang:1.22-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum* ./
+RUN go mod download
+COPY . .
+RUN go build -o /out/master ./cmd/master
+RUN go build -o /out/submit ./cmd/submit
+
+FROM alpine:3.20
+WORKDIR /app
+COPY --from=build /out/master /usr/local/bin/master
+COPY --from=build /out/submit /usr/local/bin/submit
+EXPOSE 50051
+ENTRYPOINT ["master"]

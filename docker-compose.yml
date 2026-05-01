@@ -1,0 +1,47 @@
+services:
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile.master
+    command:
+      - "-addr=:50051"
+      - "-storage-root=/data"
+      - "-auto-input=/input/large.txt"
+      - "-auto-output=/data/output"
+      - "-reducers=3"
+      - "-chunk-size=128"
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./examples:/input:ro
+      - mapreduce-data:/data
+
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: ["-master=master:50051", "-id=worker-1", "-storage-root=/data"]
+    depends_on: [master]
+    volumes:
+      - mapreduce-data:/data
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: ["-master=master:50051", "-id=worker-2", "-storage-root=/data"]
+    depends_on: [master]
+    volumes:
+      - mapreduce-data:/data
+
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: ["-master=master:50051", "-id=worker-3", "-storage-root=/data"]
+    depends_on: [master]
+    volumes:
+      - mapreduce-data:/data
+
+volumes:
+  mapreduce-data:
