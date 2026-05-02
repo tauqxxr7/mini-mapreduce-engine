@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -59,6 +60,59 @@ func TestInProcessClusterWordCount(t *testing.T) {
 	assertCount(t, counts, "systems", 1)
 }
 
+func TestExampleInputMatchesExpectedOutput(t *testing.T) {
+	dir := t.TempDir()
+	outputDir := filepath.Join(dir, "out")
+	coord, cancel := startInProcessCluster(t, filepath.Join(dir, "data"))
+	defer cancel()
+
+	submitted, err := coord.SubmitJob(context.Background(), &rpc.SubmitJobRequest{
+		InputPath:      filepath.FromSlash("../examples/large.txt"),
+		OutputPath:     outputDir,
+		NumReducers:    3,
+		ChunkSizeBytes: 128,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForCompletion(t, coord, submitted.JobID)
+
+	actual := readSortedOutput(t, outputDir)
+	expectedData, err := os.ReadFile(filepath.FromSlash("../examples/expected-output.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := strings.Split(strings.TrimSpace(string(expectedData)), "\n")
+	if len(actual) != len(expected) {
+		t.Fatalf("output line count = %d, want %d\nactual=%v\nexpected=%v", len(actual), len(expected), actual, expected)
+	}
+	for i := range expected {
+		if actual[i] != expected[i] {
+			t.Fatalf("output line %d = %q, want %q", i, actual[i], expected[i])
+		}
+	}
+}
+
+func startInProcessCluster(t *testing.T, storageRoot string) (*master.Coordinator, context.CancelFunc) {
+	t.Helper()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	coord := master.NewCoordinator(master.Config{
+		StorageRoot: storageRoot,
+		TaskLease:   time.Second,
+	}, logger)
+	client := localClient{server: coord}
+	ctx, cancel := context.WithCancel(context.Background())
+	for i := 0; i < 3; i++ {
+		w := workerpkg.New(client, workerpkg.Config{
+			ID:           fmt.Sprintf("example-worker-%d", i),
+			StorageRoot:  storageRoot,
+			PollInterval: 10 * time.Millisecond,
+		}, logger)
+		go func() { _ = w.Run(ctx) }()
+	}
+	return coord, cancel
+}
+
 func waitForCompletion(t *testing.T, coord *master.Coordinator, jobID string) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
@@ -105,11 +159,29 @@ func (c localClient) GetJobStatus(ctx context.Context, r *rpc.GetJobStatusReques
 
 func readCounts(t *testing.T, outputDir string) map[string]int {
 	t.Helper()
+	lines := readSortedOutput(t, outputDir)
+	counts := make(map[string]int)
+	for _, line := range lines {
+		fields := strings.Split(line, "\t")
+		if len(fields) != 2 {
+			t.Fatalf("invalid output line %q", line)
+		}
+		count, err := strconv.Atoi(fields[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		counts[fields[0]] = count
+	}
+	return counts
+}
+
+func readSortedOutput(t *testing.T, outputDir string) []string {
+	t.Helper()
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	counts := make(map[string]int)
+	var lines []string
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "part-") {
 			continue
@@ -122,18 +194,11 @@ func readCounts(t *testing.T, outputDir string) map[string]int {
 			if line == "" {
 				continue
 			}
-			fields := strings.Split(line, "\t")
-			if len(fields) != 2 {
-				t.Fatalf("invalid output line %q", line)
-			}
-			count, err := strconv.Atoi(fields[1])
-			if err != nil {
-				t.Fatal(err)
-			}
-			counts[fields[0]] = count
+			lines = append(lines, line)
 		}
 	}
-	return counts
+	sort.Strings(lines)
+	return lines
 }
 
 func assertCount(t *testing.T, counts map[string]int, key string, want int) {

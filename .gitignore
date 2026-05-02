@@ -1,5 +1,6 @@
 data/
 bin/
+logs/
 *.exe
 .DS_Store
 coverage.out

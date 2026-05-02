@@ -73,4 +73,4 @@ PENDING -> RUNNING -> COMPLETED
 
 ## Why Shared Local Storage?
 
-The goal is to show distributed scheduling, retries, and phase orchestration without requiring HDFS, GCS, or S3. Docker Compose gives every container access to the same named volume, which approximates a shared distributed filesystem for this mini clone.
+The goal is to show distributed scheduling, retries, and phase orchestration without requiring HDFS, GCS, or S3. Docker Compose gives every container access to the same named volume, which acts as shared cluster storage for this mini clone.

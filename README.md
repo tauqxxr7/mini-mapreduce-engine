@@ -78,6 +78,10 @@ make test
 make race
 ```
 
+## Verification Status
+
+See [docs/VERIFICATION.md](docs/VERIFICATION.md) for the latest evidence-based audit: commands that passed locally, commands blocked by host tooling, CI coverage, and exact demo reproduction steps.
+
 Run the cluster manually:
 
 ```bash
@@ -107,7 +111,7 @@ docker compose up --build
 
 The compose cluster starts one master and three workers. The master auto-submits `examples/large.txt` and writes output under `/data/output` in the shared Docker volume.
 
-Inspect output:
+After the master logs `job completed`, inspect output:
 
 ```bash
 docker compose exec master sh -c "cat /data/output/part-*.txt | sort"
@@ -142,7 +146,7 @@ data/output/part-00002.txt
 Logs are structured JSON via `log/slog`:
 
 ```json
-{"component":"master","msg":"job submitted","job_id":"job-000001","chunks":4,"reducers":3}
+{"component":"master","msg":"job submitted","job_id":"job-000001","chunks":6,"reducers":3}
 {"component":"worker","worker_id":"worker-1","msg":"task started","task_id":"job-000001-map-00000","type":"MAP"}
 {"component":"master","msg":"task reclaimed","task_id":"job-000001-map-00001","worker_timeout":true}
 {"component":"master","msg":"job completed","job_id":"job-000001","output_path":"data/output"}
@@ -181,3 +185,4 @@ More detail:
 - [Design Decisions](docs/DESIGN_DECISIONS.md)
 - [Fault Tolerance](docs/FAULT_TOLERANCE.md)
 - [Interview Guide](docs/INTERVIEW_GUIDE.md)
+- [Verification](docs/VERIFICATION.md)
